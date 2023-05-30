@@ -1,6 +1,6 @@
 package com.nurullah.server;
 
-import lombok.Data;
+import lombok.Getter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -10,13 +10,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-@Data
+@Getter
 public class Request {
-    private String method;
-    private String path;
-    private String version;
-    private String host;
-    private List<String> headers;
+    private final String method;
+    private final String path;
+    private final String version;
+    private final String host;
+    private final List<String> headers;
 
     public Request(String rawRequest) {
         String[] requestsLines = rawRequest.split("\r\n");
