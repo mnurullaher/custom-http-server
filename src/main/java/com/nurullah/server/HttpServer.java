@@ -1,11 +1,10 @@
 package com.nurullah.server;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Arrays;
 
-import static com.nurullah.server.Request.getRawRequest;
+import static com.nurullah.server.Request.createFromRawRequest;
 import static com.nurullah.server.Response.sendResponse;
 
 public class HttpServer {
@@ -20,7 +19,9 @@ public class HttpServer {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) {
                 try (Socket client = serverSocket.accept()) {
-                    var request = new Request(getRawRequest(client));
+                    var request = createFromRawRequest(new BufferedReader(
+                            new InputStreamReader(client.getInputStream())
+                    ));
                     sendResponse(client, "200", "text/plain;charset=UTF-8", "hello");
                 }
             }

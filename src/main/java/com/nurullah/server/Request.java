@@ -1,6 +1,7 @@
 package com.nurullah.server;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,23 +13,13 @@ import java.util.List;
 
 @Getter
 public class Request {
-    private final String method;
-    private final String path;
-    private final String version;
-    private final String host;
-    private final List<String> headers;
+    private String method;
+    private String path;
+    private String version;
+    private String host;
+    private List<String> headers;
 
-    public Request(String rawRequest) {
-        String[] requestsLines = rawRequest.split("\r\n");
-        String[] requestLine = requestsLines[0].split(" ");
-        this.method = requestLine[0];
-        this.path = requestLine[1];
-        this.version = requestLine[2];
-        this.host = requestsLines[1].split(" ")[1];
-        this.headers = new ArrayList<>(Arrays.asList(requestsLines).subList(2, requestsLines.length));
-    }
-    public static String getRawRequest(Socket client) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
+    public static Request createFromRawRequest(BufferedReader reader) throws IOException {
         StringBuilder requestBuilder = new StringBuilder();
         String line;
 
@@ -36,7 +27,17 @@ public class Request {
             requestBuilder.append(line).append("\r\n");
         }
 
-        return requestBuilder.toString();
+        var request = new Request();
+
+        String[] requestsLines = requestBuilder.toString().split("\r\n");
+        String[] requestLine = requestsLines[0].split(" ");
+        request.method = requestLine[0];
+        request.path = requestLine[1];
+        request.version = requestLine[2];
+        request.host = requestsLines[1].split(" ")[1];
+        request.headers = new ArrayList<>(Arrays.asList(requestsLines).subList(2, requestsLines.length));
+
+        return request;
     }
 
 
