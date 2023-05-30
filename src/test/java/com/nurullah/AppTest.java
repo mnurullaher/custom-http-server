@@ -32,7 +32,7 @@ class AppTest {
 
         HttpClient httpClient = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(new URI("http://localhost:8080"))
+                .uri(new URI("http://localhost:8080/ping"))
                 .GET()
                 .headers("Content-Type", "text/plain;charset=UTF-8")
                 .version(HttpClient.Version.HTTP_1_1)
@@ -41,7 +41,7 @@ class AppTest {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         assertEquals(200, response.statusCode());
-        assertEquals("hello", response.body());
+        assertEquals("pong", response.body());
         thread.interrupt();
     }
 
