@@ -1,15 +1,20 @@
 package com.nurullah.server;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiFunction;
 
 import static com.nurullah.server.Request.createFromRawRequest;
-import static com.nurullah.server.Response.sendResponse;
 
 public class HttpServer {
     private final int port;
+    private final Map<String, BiFunction<Request, Response, Void>> pathHandlers = new HashMap<>();
 
     public HttpServer(int port) {
         this.port = port;
@@ -20,25 +25,42 @@ public class HttpServer {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) {
                 try (Socket client = serverSocket.accept()) {
-                    var reader = new BufferedReader(
-                            new InputStreamReader(client.getInputStream())
+                    var request = createFromRawRequest(new BufferedReader(
+                                    new InputStreamReader(client.getInputStream())
+                            )
                     );
-                    var request = createFromRawRequest(reader);
-                    String content = handlePath(request);
-                    sendResponse(client, "200", "text/plain;charset=UTF-8", content);
+                    var response = new Response(client, "text/plain;charset=UTF-8");
+                    System.out.println("New request to: " + request.getPath());
+                    var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
+                    function.apply(request, response);
+                    sendResponse(response);
                 }
             }
         }
     }
 
-//    public String handle(String method, String path, BiFunction<String, String, String> function) {
-//
-//    }
+    public void handle(String method, String path, BiFunction<Request, Response, Void> function) {
+        pathHandlers.put("%s-%s".formatted(method, path), function);
+    }
 
-    public String handlePath(Request request) {
-        if ("/ping".equals(request.getPath())) {
-            return "pong";
-        }
-        return "404";
+    public void sendResponse(Response response) throws IOException {
+
+        StringBuilder responseBuilder = new StringBuilder();
+        responseBuilder.append("HTTP/1.1 ")
+                .append(response.getStatus())
+                .append(System.getProperty("line.separator"))
+                .append("ContentType: ")
+                .append(response.getContentType())
+                .append(System.getProperty("line.separator"))
+                .append("Content-Length: ")
+                .append(response.getContent().length())
+                .append(System.getProperty("line.separator"))
+                .append(System.getProperty("line.separator"))
+                .append(response.getContent());
+        System.out.println(responseBuilder);
+        OutputStream clientOutput = response.getClient().getOutputStream();
+        clientOutput.write(responseBuilder.toString().getBytes());
+        clientOutput.flush();
+        response.getClient().close();
     }
 }

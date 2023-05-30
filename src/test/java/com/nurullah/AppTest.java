@@ -16,11 +16,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 class AppTest {
-    ExecutorService executorService = Executors.newFixedThreadPool(2);
-
     @Test
-    public void should_run_server_and_send_request_and_get_response_hello() throws IOException, URISyntaxException, InterruptedException {
+    public void should_send_request_and_get_response_according_to_handle() throws IOException, URISyntaxException, InterruptedException {
+
         var server = new HttpServer(8080);
+        server.handle("GET", "/ping", (request, response) -> {
+            response.setStatus("200");
+            response.setContent("customContent");
+            return null;
+        });
         var thread = new Thread(() -> {
             try {
                 server.startServer();
@@ -41,7 +45,7 @@ class AppTest {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         assertEquals(200, response.statusCode());
-        assertEquals("pong", response.body());
+        assertEquals("customContent", response.body());
         thread.interrupt();
     }
 
