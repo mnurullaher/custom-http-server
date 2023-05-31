@@ -31,15 +31,20 @@ public class HttpServer {
                     var response = new Response(client, "text/plain;charset=UTF-8");
                     System.out.println("New request to: " + request.getPath());
                     var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
-                    function.apply(request, response);
+                    handleRequest(function, request, response);
                     sendResponse(response);
                 }
             }
         }
     }
 
-    public void handle(String method, String path,RequestHandler function) {
-        pathHandlers.put("%s-%s".formatted(method, path), function);
+    private void handleRequest(RequestHandler function, Request request, Response response) {
+        if (function != null) {
+            function.apply(request, response);
+        } else {
+            response.setStatus("404");
+            response.setContent("");
+        }
     }
 
     public void sendResponse(Response response) throws IOException {
@@ -61,5 +66,9 @@ public class HttpServer {
         clientOutput.write(responseBuilder.toString().getBytes());
         clientOutput.flush();
         response.getClient().close();
+    }
+
+    public void handle(String method, String path,RequestHandler function) {
+        pathHandlers.put("%s-%s".formatted(method, path), function);
     }
 }

@@ -46,4 +46,30 @@ class AppTest {
         thread.interrupt();
     }
 
+    @Test
+    public void should_return_status_code_404_for_requests_to_non_registered_paths() throws URISyntaxException, IOException, InterruptedException {
+        var server = new HttpServer(8080);
+        var thread = new Thread(() -> {
+            try {
+                server.startServer();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        thread.start();
+
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(new URI("http://localhost:8080/api/users"))
+                .GET()
+                .headers("Content-Type", "text/plain;charset=UTF-8")
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(404, response.statusCode());
+        thread.interrupt();
+    }
+
 }
