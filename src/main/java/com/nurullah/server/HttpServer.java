@@ -28,11 +28,11 @@ public class HttpServer {
                                     new InputStreamReader(client.getInputStream())
                             )
                     );
-                    var response = new Response(client, "text/plain;charset=UTF-8");
+                    var response = new Response();
                     System.out.println("New request to: " + request.getPath());
                     var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
                     handleRequest(function, request, response);
-                    sendResponse(response);
+                    sendResponse(response, client);
                 }
             }
         }
@@ -47,7 +47,7 @@ public class HttpServer {
         }
     }
 
-    public void sendResponse(Response response) throws IOException {
+    private void sendResponse(Response response, Socket client) throws IOException {
 
         StringBuilder responseBuilder = new StringBuilder();
         responseBuilder.append("HTTP/1.1 ")
@@ -57,18 +57,25 @@ public class HttpServer {
                 .append(response.getContentType())
                 .append(System.getProperty("line.separator"))
                 .append("Content-Length: ")
-                .append(response.getContent().length())
+                .append(response.getContent().length());
+        response.getHeaders().forEach((key, val) -> {
+            responseBuilder.append(System.getProperty("line.separator"))
+                    .append(key).append(": ")
+                    .append(val);
+        });
+        responseBuilder
                 .append(System.getProperty("line.separator"))
                 .append(System.getProperty("line.separator"))
                 .append(response.getContent());
+
         System.out.println(responseBuilder);
-        OutputStream clientOutput = response.getClient().getOutputStream();
+        OutputStream clientOutput = client.getOutputStream();
         clientOutput.write(responseBuilder.toString().getBytes());
         clientOutput.flush();
-        response.getClient().close();
+        client.close();
     }
 
-    public void handle(String method, String path,RequestHandler function) {
+    public void handle(String method, String path, RequestHandler function) {
         pathHandlers.put("%s-%s".formatted(method, path), function);
     }
 }

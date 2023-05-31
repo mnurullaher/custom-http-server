@@ -72,4 +72,36 @@ class AppTest {
         thread.interrupt();
     }
 
+    @Test
+    public void should_be_able_to_add_response_headers() throws IOException, URISyntaxException, InterruptedException {
+
+        var server = new HttpServer(8080);
+        server.handle("GET", "/header", (request, response) -> {
+            response.getHeaders().put("First-Header", "this is first header");
+            response.getHeaders().put("Second-Header", "this is second header");
+        });
+        var thread = new Thread(() -> {
+            try {
+                server.startServer();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        thread.start();
+
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(new URI("http://localhost:8080/header"))
+                .GET()
+                .headers("Content-Type", "text/plain;charset=UTF-8")
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals("this is first header", response.headers().firstValue("First-Header").orElse(""));
+        assertEquals("this is second header", response.headers().firstValue("Second-Header").orElse(""));
+        thread.interrupt();
+    }
+
 }
