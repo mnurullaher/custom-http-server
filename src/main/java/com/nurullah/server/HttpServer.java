@@ -8,13 +8,12 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiFunction;
 
 import static com.nurullah.server.Request.createFromRawRequest;
 
 public class HttpServer {
     private final int port;
-    private final Map<String, BiFunction<Request, Response, Void>> pathHandlers = new HashMap<>();
+    private final Map<String, RequestHandler> pathHandlers = new HashMap<>();
 
     public HttpServer(int port) {
         this.port = port;
@@ -39,7 +38,7 @@ public class HttpServer {
         }
     }
 
-    public void handle(String method, String path, BiFunction<Request, Response, Void> function) {
+    public void handle(String method, String path,RequestHandler function) {
         pathHandlers.put("%s-%s".formatted(method, path), function);
     }
 

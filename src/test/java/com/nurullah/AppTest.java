@@ -21,7 +21,6 @@ class AppTest {
         server.handle("GET", "/ping", (request, response) -> {
             response.setStatus("200");
             response.setContent("customContent");
-            return null;
         });
         var thread = new Thread(() -> {
             try {
