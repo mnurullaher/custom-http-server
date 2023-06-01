@@ -108,7 +108,7 @@ class AppTest {
 
         var server = new HttpServer(8080);
         server.handle("GET", "/header", (request, response) -> {
-            response.handleContent(new Model("nurullah", 25), response);
+            response.setContent(new Model("nurullah", 25));
         });
         var thread = new Thread(() -> {
             try {

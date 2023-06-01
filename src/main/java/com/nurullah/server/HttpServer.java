@@ -17,6 +17,7 @@ import static com.nurullah.server.Request.createFromRawRequest;
 public class HttpServer {
     private final int port;
     private final Map<String, RequestHandler> pathHandlers = new HashMap<>();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public HttpServer(int port) {
         this.port = port;
@@ -46,11 +47,12 @@ public class HttpServer {
             function.apply(request, response);
         } else {
             response.setStatus("404");
-            response.handleContent("", response);
+            response.setContent("");
         }
     }
 
     private void sendResponse(Response response, Socket client) throws IOException {
+        var content = objectMapper.writeValueAsString(response.getContent());
 
         StringBuilder responseBuilder = new StringBuilder();
         responseBuilder.append("HTTP/1.1 ")
@@ -60,7 +62,7 @@ public class HttpServer {
                 .append(response.getContentType())
                 .append(System.getProperty("line.separator"))
                 .append("Content-Length: ")
-                .append(response.getContent().length());
+                .append(content.length());
         response.getHeaders().forEach((key, val) -> {
             responseBuilder.append(System.getProperty("line.separator"))
                     .append(key).append(": ")
@@ -69,7 +71,7 @@ public class HttpServer {
         responseBuilder
                 .append(System.getProperty("line.separator"))
                 .append(System.getProperty("line.separator"))
-                .append(response.getContent());
+                .append(content);
 
         System.out.println(responseBuilder);
         OutputStream clientOutput = client.getOutputStream();
