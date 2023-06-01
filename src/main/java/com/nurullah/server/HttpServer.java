@@ -1,5 +1,8 @@
 package com.nurullah.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -38,12 +41,12 @@ public class HttpServer {
         }
     }
 
-    private void handleRequest(RequestHandler function, Request request, Response response) {
+    private void handleRequest(RequestHandler function, Request request, Response response) throws JsonProcessingException {
         if (function != null) {
             function.apply(request, response);
         } else {
             response.setStatus("404");
-            response.setContent("");
+            response.handleContent("", response);
         }
     }
 

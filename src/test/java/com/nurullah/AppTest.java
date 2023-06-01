@@ -1,6 +1,7 @@
 package com.nurullah;
 
 import com.nurullah.server.HttpServer;
+import com.nurullah.server.Model;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -15,12 +16,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class AppTest {
     @Test
-    public void should_send_request_and_get_response_according_to_handle() throws IOException, URISyntaxException, InterruptedException {
+    public void should_send_request_and_get_response_with_handle_method() throws IOException, URISyntaxException, InterruptedException {
 
         var server = new HttpServer(8080);
         server.handle("GET", "/ping", (request, response) -> {
             response.setStatus("200");
-            response.setContent("customContent");
         });
         var thread = new Thread(() -> {
             try {
@@ -42,7 +42,6 @@ class AppTest {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         assertEquals(200, response.statusCode());
-        assertEquals("customContent", response.body());
         thread.interrupt();
     }
 
@@ -77,8 +76,8 @@ class AppTest {
 
         var server = new HttpServer(8080);
         server.handle("GET", "/header", (request, response) -> {
-            response.getHeaders().put("First-Header", "this is first header");
-            response.getHeaders().put("Second-Header", "this is second header");
+            response.addHeader("First-Header", "this is first header");
+            response.removeHeader("Second-Header");
         });
         var thread = new Thread(() -> {
             try {
@@ -100,7 +99,37 @@ class AppTest {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         assertEquals("this is first header", response.headers().firstValue("First-Header").orElse(""));
-        assertEquals("this is second header", response.headers().firstValue("Second-Header").orElse(""));
+        assertEquals("", response.headers().firstValue("Second-Header").orElse(""));
+        thread.interrupt();
+    }
+
+    @Test
+    public void should_handle_non_primitive_response_content() throws IOException, URISyntaxException, InterruptedException {
+
+        var server = new HttpServer(8080);
+        server.handle("GET", "/header", (request, response) -> {
+            response.handleContent(new Model("nurullah", 25), response);
+        });
+        var thread = new Thread(() -> {
+            try {
+                server.startServer();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        thread.start();
+
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(new URI("http://localhost:8080/header"))
+                .GET()
+                .headers("Content-Type", "text/plain;charset=UTF-8")
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals("{\"name\":\"nurullah\",\"age\":25}", response.body());
         thread.interrupt();
     }
 
