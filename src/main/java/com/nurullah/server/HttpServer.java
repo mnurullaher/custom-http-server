@@ -2,6 +2,8 @@ package com.nurullah.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,20 +21,22 @@ public class HttpServer {
     private static final Map<String, RequestHandler> pathHandlers = new HashMap<>();
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private ServerSocket serverSocket;
+    private static final Logger logger = LoggerFactory.getLogger(HttpServer.class);
 
     public void start(int port) throws IOException {
         serverSocket = new ServerSocket(port);
-        new Thread(new ConnectionAcceptor(serverSocket)).start();
+        new Thread(new ConnectionAcceptor(serverSocket, port)).start();
     }
 
     public void shutDown() throws IOException {
         serverSocket.close();
     }
 
-    private record ConnectionAcceptor(ServerSocket serverSocket) implements Runnable {
+    private record ConnectionAcceptor(ServerSocket serverSocket, int port) implements Runnable {
         @Override
         public void run() {
-            System.out.println("Server Started");
+
+            logger.info("Server Started at PORT: " + port);
             while (!Thread.interrupted()) {
                 try (Socket client = serverSocket.accept()) {
                     var request = createFromRawRequest(new BufferedReader(
@@ -40,7 +44,7 @@ public class HttpServer {
                             )
                     );
                     var response = new Response();
-                    System.out.println("New request to: " + request.getPath());
+                    logger.info("New request to: " + request.getPath());
                     var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
                     handleRequest(function, request, response);
                     sendResponse(response, client);
@@ -77,16 +81,14 @@ public class HttpServer {
                 .append(response.getContentType()).append("\r\n")
                 .append("Content-Length: ")
                 .append(serializedContent.length());
-        response.getHeaders().forEach((key, val) -> {
-            responseBuilder.append("\r\n")
-                    .append(key).append(": ")
-                    .append(val);
-        });
+        response.getHeaders().forEach((key, val) -> responseBuilder.append("\r\n")
+                .append(key).append(": ")
+                .append(val));
         responseBuilder
                 .append("\r\n\r\n")
                 .append(serializedContent);
 
-        System.out.println(responseBuilder);
+        logger.info("RESPONSE:\n" + responseBuilder);
         OutputStream clientOutput = client.getOutputStream();
         clientOutput.write(responseBuilder.toString().getBytes());
         clientOutput.flush();
