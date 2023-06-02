@@ -1,4 +1,4 @@
-package com.nurullah.server;
+package com.nurullah.util;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
