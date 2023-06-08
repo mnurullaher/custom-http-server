@@ -35,33 +35,18 @@ public class HttpServer {
         serverSocket.close();
     }
 
+    public void handle(String method, String path, RequestHandler function) {
+        pathHandlers.put("%s-%s".formatted(method, path), function);
+    }
+
     private record ConnectionAcceptor(ServerSocket serverSocket, int port) implements Runnable {
         @Override
         public void run() {
-
             logger.info("Server Started at PORT: " + port);
             while (!Thread.interrupted()) {
                 try {
                     Socket client = serverSocket.accept();
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                var request = createFromRawRequest(new BufferedReader(
-                                                new InputStreamReader(client.getInputStream())
-                                        )
-                                );
-                                var response = new Response();
-                                logger.info("New request to: " + request.getPath());
-                                var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
-                                handleRequest(function, request, response);
-                                sendResponse(response, client);
-                            } catch (Exception e) {
-                                logger.error("New Exception", e);
-                            }
-                        }
-                    });
-
+                    executor.execute(new HandleClient(client));
                 } catch (IOException e) {
                     if (!serverSocket.isClosed())
                         throw new RuntimeException(e);
@@ -70,8 +55,23 @@ public class HttpServer {
         }
     }
 
-    public void handle(String method, String path, RequestHandler function) {
-        pathHandlers.put("%s-%s".formatted(method, path), function);
+    private record HandleClient(Socket client) implements Runnable {
+        @Override
+        public void run() {
+            try {
+                var request = createFromRawRequest(new BufferedReader(
+                                new InputStreamReader(client.getInputStream())
+                        )
+                );
+                var response = new Response();
+                logger.info("New request to: " + request.getPath());
+                var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
+                handleRequest(function, request, response);
+                sendResponse(response, client);
+            } catch (Exception e) {
+                logger.error("New Exception: ", e);
+            }
+        }
     }
 
     private static void handleRequest(RequestHandler function, Request request, Response response) throws JsonProcessingException {

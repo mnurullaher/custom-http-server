@@ -28,9 +28,6 @@ public class Request {
 
         String[] requestsLines = requestBuilder.toString().split("\r\n");
         String[] requestLine = requestsLines[0].split(" ");
-        if (requestLine.length != 3) {
-            System.out.println("Bozuk req: " + requestBuilder.toString());
-        }
         request.method = requestLine[0];
         request.path = requestLine[1];
         request.version = requestLine[2];
