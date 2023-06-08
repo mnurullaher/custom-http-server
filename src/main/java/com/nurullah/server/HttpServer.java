@@ -20,8 +20,8 @@ public class HttpServer {
 
     private static final Map<String, RequestHandler> pathHandlers = new HashMap<>();
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private ServerSocket serverSocket;
     private static final Logger logger = LoggerFactory.getLogger(HttpServer.class);
+    private ServerSocket serverSocket;
 
     public void start(int port) throws IOException {
         serverSocket = new ServerSocket(port);

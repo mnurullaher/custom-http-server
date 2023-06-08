@@ -20,14 +20,17 @@ public class Request {
         StringBuilder requestBuilder = new StringBuilder();
         String line;
 
-        while (!(line = reader.readLine()).isBlank()) {
-            requestBuilder.append(line).append("\r\n");
+        while ((line = reader.readLine()) != null && line.length() > 0) {
+                requestBuilder.append(line).append("\r\n");
         }
 
         var request = new Request();
 
         String[] requestsLines = requestBuilder.toString().split("\r\n");
         String[] requestLine = requestsLines[0].split(" ");
+        if (requestLine.length != 3) {
+            System.out.println("Bozuk req: " + requestBuilder.toString());
+        }
         request.method = requestLine[0];
         request.path = requestLine[1];
         request.version = requestLine[2];
