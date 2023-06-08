@@ -13,11 +13,14 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static com.nurullah.server.Request.createFromRawRequest;
 
 public class HttpServer {
 
+    private static final ExecutorService executor = Executors.newFixedThreadPool(100);
     private static final Map<String, RequestHandler> pathHandlers = new HashMap<>();
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final Logger logger = LoggerFactory.getLogger(HttpServer.class);
@@ -38,16 +41,27 @@ public class HttpServer {
 
             logger.info("Server Started at PORT: " + port);
             while (!Thread.interrupted()) {
-                try (Socket client = serverSocket.accept()) {
-                    var request = createFromRawRequest(new BufferedReader(
-                                    new InputStreamReader(client.getInputStream())
-                            )
-                    );
-                    var response = new Response();
-                    logger.info("New request to: " + request.getPath());
-                    var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
-                    handleRequest(function, request, response);
-                    sendResponse(response, client);
+                try {
+                    Socket client = serverSocket.accept();
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                var request = createFromRawRequest(new BufferedReader(
+                                                new InputStreamReader(client.getInputStream())
+                                        )
+                                );
+                                var response = new Response();
+                                logger.info("New request to: " + request.getPath());
+                                var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
+                                handleRequest(function, request, response);
+                                sendResponse(response, client);
+                            } catch (Exception e) {
+                                logger.error("New Exception", e);
+                            }
+                        }
+                    });
+
                 } catch (IOException e) {
                     if (!serverSocket.isClosed())
                         throw new RuntimeException(e);
@@ -79,6 +93,7 @@ public class HttpServer {
                 .append(response.getStatus()).append("\r\n")
                 .append("ContentType: ")
                 .append(response.getContentType()).append("\r\n")
+                .append("Connection: Close").append("\r\n")
                 .append("Content-Length: ")
                 .append(serializedContent.length());
         response.getHeaders().forEach((key, val) -> responseBuilder.append("\r\n")
