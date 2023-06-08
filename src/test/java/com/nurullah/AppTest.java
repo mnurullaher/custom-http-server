@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class AppTest {
 
     HttpServer server;
+    private static final int PORT = findUnusedPort();
 
     @BeforeEach
     public void before() throws IOException {
@@ -33,7 +35,7 @@ class AppTest {
             response.removeHeader("Deleted-Header");
         });
 
-        server.start(8080);
+        server.start(PORT);
     }
 
     @AfterEach
@@ -67,10 +69,19 @@ class AppTest {
 
     private static HttpRequest requestTo(String path) throws URISyntaxException {
         return HttpRequest.newBuilder()
-                .uri(new URI("http://localhost:8080/" + path))
+                .uri(new URI(String.format("http://localhost:%s/" + path, PORT)))
                 .GET()
                 .headers("Content-Type", "text/plain;charset=UTF-8")
                 .version(HttpClient.Version.HTTP_1_1)
                 .build();
+    }
+
+    private static int findUnusedPort() {
+        try (ServerSocket socket = new ServerSocket(0)) {
+            socket.setReuseAddress(true);
+            return socket.getLocalPort();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to find an unused port: " + e.getMessage(), e);
+        }
     }
 }
