@@ -2,8 +2,7 @@ package com.nurullah.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,12 +17,12 @@ import java.util.concurrent.Executors;
 
 import static com.nurullah.server.Request.createFromRawRequest;
 
+@Slf4j
 public class HttpServer {
 
     private static final ExecutorService executor = Executors.newFixedThreadPool(100);
     private static final Map<String, RequestHandler> pathHandlers = new HashMap<>();
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static final Logger logger = LoggerFactory.getLogger(HttpServer.class);
     private ServerSocket serverSocket;
 
     public void start(int port) throws IOException {
@@ -42,7 +41,7 @@ public class HttpServer {
     private record ConnectionAcceptor(ServerSocket serverSocket, int port) implements Runnable {
         @Override
         public void run() {
-            logger.info("Server Started at PORT: " + port);
+            log.info("Server Started at PORT: " + port);
             while (!Thread.interrupted()) {
                 try {
                     Socket client = serverSocket.accept();
@@ -67,17 +66,17 @@ public class HttpServer {
                                 )
                         );
                     } catch (InvalidRequestException e) {
-                        logger.error("Invalid request!");
+                        log.error("Invalid request!");
                         client.close();
                         return;
                     }
-                    logger.info("New request to: " + request.getPath());
+                    log.info("New request to: " + request.getPath());
                     var response = new Response();
                     var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
                     handleRequest(function, request, response);
                     if (sendResponseAndCloseConnection(client, request, response)) break;
                 } catch (IOException e) {
-                    logger.error(e.getLocalizedMessage());
+                    log.error(e.getLocalizedMessage());
                 }
             }
         }
@@ -94,7 +93,7 @@ public class HttpServer {
 
     private static boolean sendResponseAndCloseConnection(Socket client, Request request, Response response) throws IOException {
         OutputStream clientOutput = client.getOutputStream();
-        String connectionHeader = request.getHeaders().get("Connection: ");
+        String connectionHeader = request.getHeaders().get("Connection:");
         if (connectionHeader == null || !connectionHeader.equals("keep-alive")) {
             clientOutput.write(getRawResponse(response, "Close").getBytes());
             clientOutput.flush();
@@ -126,6 +125,7 @@ public class HttpServer {
         responseBuilder
                 .append("\r\n\r\n")
                 .append(serializedContent);
+        log.info("RESPONSE: \n" + responseBuilder);
         return responseBuilder.toString();
     }
 }
