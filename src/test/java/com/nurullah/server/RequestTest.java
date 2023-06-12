@@ -18,7 +18,7 @@ class RequestTest {
     @Mock
     private BufferedReader bufferedReader;
     @Test
-    void should_create_request_object_with_read_line_input() throws IOException {
+    void should_create_request_object_with_read_line_input() throws IOException, InvalidRequestException {
         when(bufferedReader.readLine())
                 .thenReturn("GET /test HTTP/1.1")
                 .thenReturn("Content-Length: 0")

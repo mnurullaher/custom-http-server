@@ -19,7 +19,7 @@ public class Request {
         return headers.get("Host:");
     }
 
-    public static Request createFromRawRequest(BufferedReader reader) throws IOException {
+    public static Request createFromRawRequest(BufferedReader reader) throws IOException, InvalidRequestException {
         StringBuilder requestBuilder = new StringBuilder();
         String line;
 
@@ -31,6 +31,9 @@ public class Request {
 
         String[] requestsLines = requestBuilder.toString().split("\r\n");
         String[] requestLine = requestsLines[0].split(" ");
+        if (requestLine.length != 3) {
+            throw new InvalidRequestException();
+        }
         request.method = requestLine[0];
         request.path = requestLine[1];
         request.version = requestLine[2];

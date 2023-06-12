@@ -59,10 +59,17 @@ public class HttpServer {
         @Override
         public void run() {
             try {
-                var request = createFromRawRequest(new BufferedReader(
-                                new InputStreamReader(client.getInputStream())
-                        )
-                );
+                Request request;
+                try {
+                    request = createFromRawRequest(new BufferedReader(
+                                    new InputStreamReader(client.getInputStream())
+                            )
+                    );
+                } catch (InvalidRequestException e) {
+                    logger.error("Invalid request!");
+                    client.close();
+                    return;
+                }
                 var response = new Response();
                 logger.info("New request to: " + request.getPath());
                 var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
