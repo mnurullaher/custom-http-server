@@ -1,6 +1,5 @@
-package com.nurullah;
+package com.nurullah.server;
 
-import com.nurullah.server.HttpServer;
 import com.nurullah.util.Model;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +18,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class AppTest {
+class HttpServerIT {
 
     HttpServer server;
     private static final int PORT = findUnusedPort();

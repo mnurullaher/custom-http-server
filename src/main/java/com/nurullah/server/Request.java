@@ -4,24 +4,27 @@ import lombok.Getter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 @Getter
 public class Request {
     private String method;
     private String path;
     private String version;
-    private String host;
-    private List<String> headers;
+    private Map<String, String> headers = new HashMap<>();
+
+    public String getHost() {
+        return headers.get("Host:");
+    }
 
     public static Request createFromRawRequest(BufferedReader reader) throws IOException {
         StringBuilder requestBuilder = new StringBuilder();
         String line;
 
         while ((line = reader.readLine()) != null && line.length() > 0) {
-                requestBuilder.append(line).append("\r\n");
+            requestBuilder.append(line).append("\r\n");
         }
 
         var request = new Request();
@@ -31,8 +34,10 @@ public class Request {
         request.method = requestLine[0];
         request.path = requestLine[1];
         request.version = requestLine[2];
-        request.host = requestsLines[1].split(" ")[1];
-        request.headers = new ArrayList<>(Arrays.asList(requestsLines).subList(2, requestsLines.length));
+        Arrays.asList(requestsLines).subList(1, requestsLines.length).forEach(l -> {
+            var headerLine = l.split(" ");
+            request.headers.put(headerLine[0], headerLine[1]);
+        });
 
         return request;
     }
