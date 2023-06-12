@@ -58,25 +58,27 @@ public class HttpServer {
     private record HandleClient(Socket client) implements Runnable {
         @Override
         public void run() {
-            try {
-                Request request;
+            while (!Thread.interrupted()) {
                 try {
-                    request = createFromRawRequest(new BufferedReader(
-                                    new InputStreamReader(client.getInputStream())
-                            )
-                    );
-                } catch (InvalidRequestException e) {
-                    logger.error("Invalid request!");
-                    client.close();
-                    return;
+                    Request request;
+                    try {
+                        request = createFromRawRequest(new BufferedReader(
+                                        new InputStreamReader(client.getInputStream())
+                                )
+                        );
+                    } catch (InvalidRequestException e) {
+                        logger.error("Invalid request!");
+                        client.close();
+                        return;
+                    }
+                    logger.info("New request to: " + request.getPath());
+                    var response = new Response();
+                    var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
+                    handleRequest(function, request, response);
+                    if (sendResponseAndCloseConnection(client, request, response)) break;
+                } catch (IOException e) {
+                    logger.error(e.getLocalizedMessage());
                 }
-                var response = new Response();
-                logger.info("New request to: " + request.getPath());
-                var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
-                handleRequest(function, request, response);
-                sendResponse(response, client);
-            } catch (Exception e) {
-                logger.error("New Exception: ", e);
             }
         }
     }
@@ -90,7 +92,22 @@ public class HttpServer {
         }
     }
 
-    private static void sendResponse(Response response, Socket client) throws IOException {
+    private static boolean sendResponseAndCloseConnection(Socket client, Request request, Response response) throws IOException {
+        OutputStream clientOutput = client.getOutputStream();
+        String connectionHeader = request.getHeaders().get("Connection: ");
+        if (connectionHeader == null || !connectionHeader.equals("keep-alive")) {
+            clientOutput.write(getRawResponse(response, "Close").getBytes());
+            clientOutput.flush();
+            client.close();
+            return true;
+        } else {
+            clientOutput.write(getRawResponse(response, "keep-alive").getBytes());
+            clientOutput.flush();
+        }
+        return false;
+    }
+
+    private static String getRawResponse(Response response, String connectionHeader) throws IOException {
         String serializedContent = response.getContent() == null ? "" :
                 response.getContent() instanceof String ? (String) response.getContent() :
                         objectMapper.writeValueAsString(response.getContent());
@@ -100,7 +117,7 @@ public class HttpServer {
                 .append(response.getStatus()).append("\r\n")
                 .append("ContentType: ")
                 .append(response.getContentType()).append("\r\n")
-                .append("Connection: Close").append("\r\n")
+                .append("Connection: ").append(connectionHeader).append("\r\n")
                 .append("Content-Length: ")
                 .append(serializedContent.length());
         response.getHeaders().forEach((key, val) -> responseBuilder.append("\r\n")
@@ -109,11 +126,6 @@ public class HttpServer {
         responseBuilder
                 .append("\r\n\r\n")
                 .append(serializedContent);
-
-        logger.info("RESPONSE:\n" + responseBuilder);
-        OutputStream clientOutput = client.getOutputStream();
-        clientOutput.write(responseBuilder.toString().getBytes());
-        clientOutput.flush();
-        client.close();
+        return responseBuilder.toString();
     }
 }
