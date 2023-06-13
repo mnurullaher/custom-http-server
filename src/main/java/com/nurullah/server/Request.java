@@ -4,15 +4,14 @@ import lombok.Getter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Getter
 public class Request {
     private String method;
     private String path;
     private String version;
+    private String body;
     private final Map<String, String> headers = new HashMap<>();
 
     public String getHost() {
@@ -41,6 +40,12 @@ public class Request {
             var headerLine = l.split(" ");
             request.headers.put(headerLine[0].replace(":", ""), headerLine[1]);
         });
+
+        var contentLength = Optional.of(Integer.parseInt(request.getHeaders().get("Content-Length"))).orElse(0);
+        var content = new char[contentLength];
+        reader.read(content);
+        request.body = new String(content);
+
         return request;
     }
 
