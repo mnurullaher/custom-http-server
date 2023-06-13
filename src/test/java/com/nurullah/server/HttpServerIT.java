@@ -3,6 +3,7 @@ package com.nurullah.server;
 import com.nurullah.util.Model;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -22,6 +23,7 @@ class HttpServerIT {
 
     HttpServer server;
     private static final int PORT = findUnusedPort();
+    private static final String BODY = "{\"name\":\"nurullah\"}";
 
     @BeforeEach
     public void before() throws IOException {
@@ -34,12 +36,31 @@ class HttpServerIT {
             response.removeHeader("Deleted-Header");
         });
 
+        server.handle("POST", "/test", (req, resp) -> {
+            resp.setContent(req.getBody());
+        });
+
         server.start(PORT);
     }
 
     @AfterEach
     public void after() throws IOException {
         server.shutDown();
+    }
+
+    @Test
+    public void should_parse_request_body() throws URISyntaxException, IOException, InterruptedException {
+        var request = HttpRequest.newBuilder()
+                .uri(new URI(String.format("http://localhost:%s/test", PORT)))
+                .POST(HttpRequest.BodyPublishers.ofString(BODY))
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
+
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(200, response.statusCode());
+        assertEquals(BODY, response.body());
     }
 
     @ParameterizedTest

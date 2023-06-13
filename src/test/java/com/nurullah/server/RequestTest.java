@@ -10,6 +10,7 @@ import java.io.IOException;
 
 import static com.nurullah.server.Request.createFromRawRequest;
 import static org.assertj.core.api.BDDAssertions.then;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -17,11 +18,12 @@ class RequestTest {
 
     @Mock
     private BufferedReader bufferedReader;
+    private static final int bodyLength = 5;
     @Test
-    void should_create_request_object_with_read_line_input() throws IOException, InvalidRequestException {
+    public void should_create_request_object_with_read_line_input() throws IOException, InvalidRequestException {
         when(bufferedReader.readLine())
                 .thenReturn("GET /test HTTP/1.1")
-                .thenReturn("Content-Length: 0")
+                .thenReturn("Content-Length: " + bodyLength)
                 .thenReturn("Host: localhost:8080")
                 .thenReturn("User-Agent: User-Agent")
                 .thenReturn("Content-Type: text/plain")
@@ -35,5 +37,6 @@ class RequestTest {
         then(result.getVersion()).isEqualTo("HTTP/1.1");
         then(result.getHost()).isEqualTo("localhost:8080");
         then(result.getHeaders().size()).isEqualTo(4);
+        verify(bufferedReader).read(new char[bodyLength]);
     }
 }
