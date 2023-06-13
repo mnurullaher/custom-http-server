@@ -13,10 +13,10 @@ public class Request {
     private String method;
     private String path;
     private String version;
-    private Map<String, String> headers = new HashMap<>();
+    private final Map<String, String> headers = new HashMap<>();
 
     public String getHost() {
-        return headers.get("Host:");
+        return headers.get("Host");
     }
 
     public static Request createFromRawRequest(BufferedReader reader) throws IOException, InvalidRequestException {
@@ -39,9 +39,8 @@ public class Request {
         request.version = requestLine[2];
         Arrays.asList(requestsLines).subList(1, requestsLines.length).forEach(l -> {
             var headerLine = l.split(" ");
-            request.headers.put(headerLine[0], headerLine[1]);
+            request.headers.put(headerLine[0].replace(":", ""), headerLine[1]);
         });
-
         return request;
     }
 

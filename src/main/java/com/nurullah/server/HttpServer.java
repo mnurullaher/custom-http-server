@@ -1,17 +1,16 @@
 package com.nurullah.server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -45,6 +44,7 @@ public class HttpServer {
             while (!Thread.interrupted()) {
                 try {
                     Socket client = serverSocket.accept();
+                    log.info("New client excepted, addr: {}", client.getRemoteSocketAddress());
                     executor.execute(new HandleClient(client));
                 } catch (IOException e) {
                     if (!serverSocket.isClosed())
@@ -55,55 +55,52 @@ public class HttpServer {
     }
 
     private record HandleClient(Socket client) implements Runnable {
+
+        private static final RequestHandler NotFoundHandler = (req, resp) -> {
+          resp.setStatus("404");
+          resp.setContent("");
+        };
+
         @Override
         public void run() {
             while (!Thread.interrupted()) {
                 try {
                     Request request;
-                    try {
-                        request = createFromRawRequest(new BufferedReader(
-                                        new InputStreamReader(client.getInputStream())
-                                )
-                        );
-                    } catch (InvalidRequestException e) {
-                        log.error("Invalid request!");
-                        client.close();
-                        return;
-                    }
+                    request = createFromRawRequest(new BufferedReader(
+                                    new InputStreamReader(client.getInputStream())
+                            )
+                    );
                     log.info("New request to: " + request.getPath());
                     var response = new Response();
-                    var function = pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath()));
-                    handleRequest(function, request, response);
-                    if (sendResponseAndCloseConnection(client, request, response)) break;
+                    var function = Objects.requireNonNullElse(
+                            pathHandlers.get("%s-%s".formatted(request.getMethod(), request.getPath())),
+                            NotFoundHandler
+                    );
+                    function.apply(request, response);
+                    var clientOutput = client.getOutputStream();
+                    var connectionHeader = Objects.requireNonNullElse(
+                            request.getHeaders().get("Connection"), "keep-alive"
+                    );
+                    clientOutput.write(getRawResponse(response, connectionHeader).getBytes());
+                    clientOutput.flush();
+                    if (connectionHeader.equals("Close")) {
+                        client.close();
+                        break;
+                    }
                 } catch (IOException e) {
-                    log.error(e.getLocalizedMessage());
+                    log.error("Client handling failed, ERR is: {}", e.getLocalizedMessage());
+                    break;
+                } catch (InvalidRequestException e) {
+                    log.error("Invalid request! ERR is: {}", e.getLocalizedMessage());
+                    try {
+                        client.close();
+                    } catch (IOException ex) {
+                        throw new RuntimeException();
+                    }
+                    break;
                 }
             }
         }
-    }
-
-    private static void handleRequest(RequestHandler function, Request request, Response response) throws JsonProcessingException {
-        if (function != null) {
-            function.apply(request, response);
-        } else {
-            response.setStatus("404");
-            response.setContent("");
-        }
-    }
-
-    private static boolean sendResponseAndCloseConnection(Socket client, Request request, Response response) throws IOException {
-        OutputStream clientOutput = client.getOutputStream();
-        String connectionHeader = request.getHeaders().get("Connection:");
-        if (connectionHeader == null || !connectionHeader.equals("keep-alive")) {
-            clientOutput.write(getRawResponse(response, "Close").getBytes());
-            clientOutput.flush();
-            client.close();
-            return true;
-        } else {
-            clientOutput.write(getRawResponse(response, "keep-alive").getBytes());
-            clientOutput.flush();
-        }
-        return false;
     }
 
     private static String getRawResponse(Response response, String connectionHeader) throws IOException {
@@ -125,7 +122,7 @@ public class HttpServer {
         responseBuilder
                 .append("\r\n\r\n")
                 .append(serializedContent);
-        log.info("RESPONSE: \n" + responseBuilder);
+        log.info("RESPONSE:\n{}", responseBuilder);
         return responseBuilder.toString();
     }
 }
