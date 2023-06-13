@@ -41,8 +41,11 @@ public class Request {
             request.headers.put(headerLine[0].replace(":", ""), headerLine[1]);
         });
 
-        var contentLength = Optional.of(Integer.parseInt(request.getHeaders().get("Content-Length"))).orElse(0);
-        var content = new char[contentLength];
+        var contentLength = Objects.requireNonNullElse(
+                request.getHeaders().get("Content-Length"),
+                "0"
+                );
+        var content = new char[Integer.parseInt(contentLength)];
         reader.read(content);
         request.body = new String(content);
 
