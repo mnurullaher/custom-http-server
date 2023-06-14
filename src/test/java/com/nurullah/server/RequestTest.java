@@ -8,7 +8,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
-import java.net.URISyntaxException;
 import java.util.stream.Stream;
 
 import static com.nurullah.server.Request.createFromRawRequest;
@@ -45,9 +44,14 @@ class RequestTest {
 
     @ParameterizedTest
     @MethodSource
-    public void should_throw_invalid_request_exception_in_bad_requests(String method, String content) {
+    public void should_throw_invalid_request_exception_in_bad_requests(
+            String method,
+            String path,
+            String version,
+            String content
+    ) {
         var rawRequest = """
-                %s /test HTTP/1.1
+                %s %s %s
                 Content-Length: 7
                 Host: localhost:8080
                 User-Agent: java
@@ -55,20 +59,22 @@ class RequestTest {
                                 
                 %s
                 """;
-        var formattedReq = String.format(rawRequest, method, content);
+        var formattedReq = String.format(rawRequest, method, path, version, content);
         var inputString = new StringReader(formattedReq);
         var reader = new BufferedReader(inputString);
 
         assertThrows(InvalidRequestException.class, () -> createFromRawRequest(reader));
     }
 
-    private static Stream<Arguments> should_throw_invalid_request_exception_in_bad_requests() throws URISyntaxException {
+    private static Stream<Arguments> should_throw_invalid_request_exception_in_bad_requests() {
         return Stream.of(
-                Arguments.of("XYZ", "content"),
-                Arguments.of("GET", "cont"),
-                Arguments.of("GET", ""),
-                Arguments.of("", "content"),
-                Arguments.of("", "")
+                Arguments.of("XYZ", "/test", "HTTP/1.1", "content"),
+                Arguments.of("GET", "/test", "HTTP/1.0", "cont"),
+                Arguments.of("GET", "/test", "HTTP/1.1", ""),
+                Arguments.of("", "/test", "HTTP/1.1", "content"),
+                Arguments.of("", "/test", "HTTP/1.1", ""),
+                Arguments.of("GET", "/test", "HTTP/**", "content"),
+                Arguments.of("GET", "xyz", "HTTP/1.1", "content")
         );
     }
 }

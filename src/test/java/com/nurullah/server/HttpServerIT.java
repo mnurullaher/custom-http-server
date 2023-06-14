@@ -36,9 +36,7 @@ class HttpServerIT {
             response.removeHeader("Deleted-Header");
         });
 
-        server.handle("POST", "/test", (req, resp) -> {
-            resp.setContent(req.getBody());
-        });
+        server.handle("POST", "/test", (req, resp) -> resp.setContent(req.getBody()));
 
         server.start(PORT);
     }

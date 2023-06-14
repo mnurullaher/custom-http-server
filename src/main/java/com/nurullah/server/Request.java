@@ -30,8 +30,12 @@ public class Request {
 
         String[] requestsLines = requestBuilder.toString().split("\r\n");
         String[] requestLine = requestsLines[0].split(" ");
-        boolean isMethodValid = Arrays.stream(RequestMethod.values()).map(Enum::name).anyMatch(v -> v.equals(requestLine[0]));
-        if (requestLine.length != 3 || !isMethodValid) {
+        var isMethodValid = Arrays.stream(RequestMethod.values())
+                .map(Enum::name)
+                .anyMatch(v -> v.equals(requestLine[0]));
+        var isPathValid = requestLine[1].charAt(0) == '/';
+        var isVersionValid = List.of("HTTP/1.1", "HTTP/1.0").contains(requestLine[2]);
+        if (requestLine.length != 3 || !isMethodValid || !isPathValid || !isVersionValid) {
             throw new InvalidRequestException();
         }
         request.method = requestLine[0];
