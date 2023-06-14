@@ -16,7 +16,7 @@ as well as specify the properties of responses.
         resp.removeHeader("New-Header");
     });
     server.start(8080);
-    server.shutDown();
+    //server.shutDown(); You can use this function for graceful shut down.
 ```
 &ensp;&ensp;&ensp;&ensp;As can be seen in the example; properties of requests can
 be read and properties of responses can be easily manipulated.
