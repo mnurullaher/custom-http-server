@@ -1,35 +1,37 @@
 package com.nurullah.server;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.StringReader;
+import java.net.URISyntaxException;
+import java.util.stream.Stream;
 
 import static com.nurullah.server.Request.createFromRawRequest;
 import static org.assertj.core.api.BDDAssertions.then;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@ExtendWith(MockitoExtension.class)
 class RequestTest {
 
-    @Mock
-    private BufferedReader bufferedReader;
-    private static final int bodyLength = 5;
     @Test
     public void should_create_request_object_with_read_line_input() throws IOException, InvalidRequestException {
-        when(bufferedReader.readLine())
-                .thenReturn("GET /test HTTP/1.1")
-                .thenReturn("Content-Length: " + bodyLength)
-                .thenReturn("Host: localhost:8080")
-                .thenReturn("User-Agent: User-Agent")
-                .thenReturn("Content-Type: text/plain")
-                .thenReturn("");
+        var rawRequest = """
+                GET /test HTTP/1.1
+                Content-Length: 7
+                Host: localhost:8080
+                User-Agent: java
+                Content-Type: test/plain
+                                
+                content
+                """;
+        var inputString = new StringReader(rawRequest);
+        var reader = new BufferedReader(inputString);
 
-        var result = createFromRawRequest(bufferedReader);
+        var result = createFromRawRequest(reader);
 
         then(result).isNotNull();
         then(result.getMethod()).isEqualTo("GET");
@@ -37,6 +39,36 @@ class RequestTest {
         then(result.getVersion()).isEqualTo("HTTP/1.1");
         then(result.getHost()).isEqualTo("localhost:8080");
         then(result.getHeaders().size()).isEqualTo(4);
-        verify(bufferedReader).read(new char[bodyLength]);
+        then(result.getBody()).isEqualTo("content");
+    }
+
+
+    @ParameterizedTest
+    @MethodSource
+    public void should_throw_invalid_request_exception_in_bad_requests(String method, String content) {
+        var rawRequest = """
+                %s /test HTTP/1.1
+                Content-Length: 7
+                Host: localhost:8080
+                User-Agent: java
+                Content-Type: test/plain
+                                
+                %s
+                """;
+        var formattedReq = String.format(rawRequest, method, content);
+        var inputString = new StringReader(formattedReq);
+        var reader = new BufferedReader(inputString);
+
+        assertThrows(InvalidRequestException.class, () -> createFromRawRequest(reader));
+    }
+
+    private static Stream<Arguments> should_throw_invalid_request_exception_in_bad_requests() throws URISyntaxException {
+        return Stream.of(
+                Arguments.of("XYZ", "content"),
+                Arguments.of("GET", "cont"),
+                Arguments.of("GET", ""),
+                Arguments.of("", "content"),
+                Arguments.of("", "")
+        );
     }
 }

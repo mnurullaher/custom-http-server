@@ -91,7 +91,7 @@ public class HttpServer {
                     log.error("Client handling failed, ERR is: {}", e.getLocalizedMessage());
                     break;
                 } catch (InvalidRequestException e) {
-                    log.error("Invalid request! ERR is: {}", e.getLocalizedMessage());
+                    log.error("Invalid request!");
                     try {
                         client.close();
                     } catch (IOException ex) {

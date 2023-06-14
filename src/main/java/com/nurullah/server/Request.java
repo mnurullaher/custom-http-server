@@ -30,7 +30,8 @@ public class Request {
 
         String[] requestsLines = requestBuilder.toString().split("\r\n");
         String[] requestLine = requestsLines[0].split(" ");
-        if (requestLine.length != 3) {
+        boolean isMethodValid = Arrays.stream(RequestMethod.values()).map(Enum::name).anyMatch(v -> v.equals(requestLine[0]));
+        if (requestLine.length != 3 || !isMethodValid) {
             throw new InvalidRequestException();
         }
         request.method = requestLine[0];
@@ -41,12 +42,16 @@ public class Request {
             request.headers.put(headerLine[0].replace(":", ""), headerLine[1]);
         });
 
-        var contentLength = Objects.requireNonNullElse(
-                request.getHeaders().get("Content-Length"),
-                "0"
-                );
-        var content = new char[Integer.parseInt(contentLength)];
-        reader.read(content);
+        var contentLength = Integer.parseInt(
+                Objects.requireNonNullElse(
+                        request.getHeaders().get("Content-Length"),
+                        "0"
+                )
+        );
+        var content = new char[contentLength];
+        var readLength = reader.read(content);
+        if (contentLength != readLength)
+            throw new InvalidRequestException();
         request.body = new String(content);
 
         return request;
