@@ -29,14 +29,14 @@ class HttpServerIT {
     public void before() throws IOException {
         server = new HttpServer();
 
-        server.handle("GET", "/test", (request, response) -> {
+        server.handle(RequestMethod.GET, "/test", (request, response) -> {
             response.setContent(new Model("Nurullah", 25));
             response.addHeader("New-Header", "New Header");
             response.addHeader("Deleted-Header", "Deleted");
             response.removeHeader("Deleted-Header");
         });
 
-        server.handle("POST", "/test", (req, resp) -> resp.setContent(req.getBody()));
+        server.handle(RequestMethod.POST, "/test", (req, resp) -> resp.setContent(req.getBody()));
 
         server.start(PORT);
     }

@@ -33,8 +33,8 @@ public class HttpServer {
         serverSocket.close();
     }
 
-    public void handle(String method, String path, RequestHandler function) {
-        pathHandlers.put("%s-%s".formatted(method, path), function);
+    public void handle(RequestMethod method, String path, RequestHandler function) {
+        pathHandlers.put("%s-%s".formatted(method.name(), path), function);
     }
 
     private record ConnectionAcceptor(ServerSocket serverSocket, int port) implements Runnable {
